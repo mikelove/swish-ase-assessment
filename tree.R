@@ -9,10 +9,11 @@ head(cov)
 head(res)
 
 library(dplyr)
-dat <- dat[2 * 1:(nrow(dat)/2),] # even rows
-dat$gene <- sub(".*_","",dat$txp)
-dat$txp0 <- sub("_M\\|.*","",dat$txp)
-dat$abund <- sub(".*\\|.*_(.*)_FBgn.*","\\1",dat$txp)
+dat <- dat[grep("_M", dat$txp),]
+#dat$gene <- sub(".*_","",dat$txp)
+#dat$txp0 <- sub("_M\\|.*","",dat$txp)
+#dat$abund <- sub(".*\\|.*_(.*)_FBgn.*","\\1",dat$txp)
+names(dat)[12:14] <- c("txp0","gene","abund")
 
 dat %>% filter(Group_4 != "unknown") %>%
   summarize(uniq = n_distinct(gene))
@@ -61,3 +62,8 @@ dat_ai %>% group_by(gene) %>%
 gene_ai <- dat_ai %>% group_by(gene) %>%
   summarize(geneInfRV = mean(meanInfRV), sub_gene_agg=any(sub_gene_agg))
 
+agg_genes <- dat %>% filter(gene %in% ai_genes) %>%
+  arrange(gene, abund) %>%
+  group_by(gene) %>%
+  summarize(gene_agg = all(Group_2 == Group_2[1])) %>%
+  filter(gene_agg) %>% pull(gene)
