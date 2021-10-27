@@ -25,16 +25,34 @@ assayNames(wide)
 
 save(wide, file="se.oracle.rda")
 
+load("/proj/milovelab/wu/bulk-ase/ase-analysis/Bootstrap_Analysis/wide.oracle.b+.rda")
+
 y <- wide
 y <- labelKeep(y)
 y <- y[mcols(y)$keep,] 
 set.seed(1)
 y <- swish(y, x="allele", pair="sample")
-table(mcols(y)$qvalue < .1)
+table(mcols(y)$qvalue < .01)
 hist(mcols(y)$pvalue, col="grey")
 
-head(mcols(y)[mcols(y)$pvalue < 0.2,])
+sig_txps <- rownames(y)[mcols(y)$qvalue < 0.01]
+table(grepl("-2$", sig_txps))
 
-y$s <- factor(c(1:10,1:10))
+grep("-2$", sig_txps)
+sig_txps[grep("-2$", sig_txps)]
+table(grepl("-2$", sig_txps))
+
+hist(mcols(y)[sig_txps[grep("-2$", sig_txps)],]$log2FC, breaks=20, border="white", col="grey")
+
+zzz <- mcols(y)[sig_txps[grep("-2$", sig_txps)],]
+zzz <- zzz[order(zzz$pvalue),]
+head(zzz,10)
+
+txps[txps$gene_id == "FBgn0003372"]
+
+y$s <- c(1:10,1:10)
 y <- computeInfRV(y)
-plotInfReps(y, idx="FBgn0000008-1.67", x="allele", cov="s", legend=TRUE)
+plotInfReps(y, idx="FBgn0001234-2", x="s", cov="allele", legend=TRUE, legendPos="bottom", xlab="sample")
+plotInfReps(y, idx="FBgn0003372-2", x="s", cov="allele", legend=TRUE, legendPos="bottom", xlab="sample")
+plotInfReps(y, idx="FBgn0003373-2", x="s", cov="allele", legend=TRUE, legendPos="bottom", xlab="sample")
+plotInfReps(y, idx="FBgn0003943-2", x="s", cov="allele", legend=TRUE, legendPos="bottom", xlab="sample")
