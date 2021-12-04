@@ -31,8 +31,8 @@ wide <- importAllelicCounts(coldata, a1="P", a2="M",
 
 assayNames(wide)
 
-#save(wide, file="se.oracle.rda")
-save(wide, file="se.txp.rda")
+save(wide, file="se.oracle.rda")
+#save(wide, file="se.txp.rda")
 # load object
 #load("/proj/milovelab/wu/bulk-ase/ase-analysis/Bootstrap_Analysis/wide.txp.b+.rda")
 #load("/proj/milovelab/wu/bulk-ase/ase-analysis/Bootstrap_Analysis/wide.oracle.b+.rda")
@@ -48,10 +48,11 @@ table(mcols(y)$qvalue < .01)
 hist(mcols(y)$pvalue, col="grey")
 
 # oracle
-sig_txps <- rownames(y)[mcols(y)$qvalue < 0.01]
+alpha <- .01
+sig_txps <- rownames(y)[mcols(y)$qvalue < alpha]
 table(grepl("-2$", sig_txps))
-table(ai=!grepl("-2$", rownames(y)), sig=mcols(y)$qvalue < 0.01)
-prop.table(table(ai=!grepl("-2$", rownames(y)), sig=mcols(y)$qvalue < 0.01), 1)
+table(ai=!grepl("-2$", rownames(y)), sig=mcols(y)$qvalue < alpha)
+prop.table(table(ai=!grepl("-2$", rownames(y)), sig=mcols(y)$qvalue < alpha), 2)
 
 # txp-level
 mcols(y)$abund <- mcols(txps)[rownames(y),"abundance"]
@@ -59,7 +60,6 @@ mcols(y)$abund <- mcols(txps)[rownames(y),"abundance"]
 sig <- mcols(y)$qvalue < 0.1
 ai <- mcols(y)$abund != 2
 table(ai, sig)
-
 
 ###
 
