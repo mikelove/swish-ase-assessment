@@ -1,2 +1,0 @@
-# index
-/proj/milovelab/bin/salmon-1.4.0_linux_x86_64/bin/salmon index -t /proj/milovelab/wu/bulk-ase/ase-sim/transcripts.fa -i bulk-ase-sim_1.4.0 --keepDuplicates
