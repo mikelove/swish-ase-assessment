@@ -1,8 +1,9 @@
 library(iCOBRA)
 
-cols <- palette()[2:5]
+cols <- palette()[2:6]
 meths <- c("txp","gene","tss","oracle")
-names(cols) <- meths
+names(cols)[1:4] <- meths
+names(cols)[5] <- "truth"
 
 library(dplyr)
 library(tibble)
@@ -35,8 +36,9 @@ for (m in meths) {
 cd <- COBRAData(padj=padj, truth=truth)
 cp <- calculate_performance(cd,
                             binary_truth="status",
-                            aspect=c("tpr","fdr","fdrtpr","fdrtprcurve"),
-                            thrs=c(.01,.05,.1))
+                            aspect=c("tpr","fdr","fdrtpr","fdrnbr","fdrtprcurve","overlap"),
+                            thrs=c(.01,.05,.1),
+                            thr_venn=.05)
 
 # the raw data, calculated at thresholds and across categories
 head(tpr(cp))
@@ -58,3 +60,11 @@ plot_fdrtprcurve(cobraplot,
                  xaxisrange=xrng,
                  yaxisrange=yrng,
                  title="txp-level AI testing")
+
+# FDR and number
+plot_fdrnbrcurve(prepare_data_for_plot(cp, colorscheme=cols),
+                 xaxisrange=xrng) + ggplot2::ylim(0,7500)
+
+# upset plot
+plot_upset(prepare_data_for_plot(cp, colorscheme=cols),
+           order.by="freq", nintersects=10)
