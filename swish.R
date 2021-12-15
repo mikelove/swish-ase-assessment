@@ -1,7 +1,7 @@
 suppressPackageStartupMessages(library(SummarizedExperiment))
 library(tximeta)
 library(devtools)
-load_all("../../fishpond/fishpond")
+load_all("/proj/milovelab/love/proj/fishpond/fishpond")
 
 # import tx2gene
 dir <- "../ase-sim/quants"
@@ -11,11 +11,16 @@ files <- file.path(dir, samps, "quant.sf")
 if (FALSE) {
   load("../ase-sim/granges.rda")
   mcols(txps)$txp_groups <- paste0(txps$gene_id, "-", round(txps$abundance,2))
-  t2g <- data.frame(txp=c(names(txps)), gene=c(txps$txp_groups))
+  t2g <- data.frame(txp=names(txps), gene=txps$txp_groups)
   write.table(t2g, file="t2g.oracle.tsv", quote=FALSE, row.names=FALSE)
+  mcols(txps)$tss_groups <- paste0(txps$gene_id, "-", round(txps$tss,2))
+  t2g <- data.frame(txp=names(txps), gene=txps$tss_groups)
+  write.table(t2g, file="t2g.tss.tsv", quote=FALSE, row.names=FALSE)
+  t2g <- data.frame(txp=names(txps), gene=txps$gene_id)
+  write.table(t2g, file="t2g.gene.tsv", quote=FALSE, row.names=FALSE)
 }
 
-t2g <- read.table("t2g.oracle.tsv", header=TRUE)
+#t2g <- read.table("t2g.oracle.tsv", header=TRUE)
 
 s <- paste0("samp",seq_along(files))
 coldata <- data.frame(files=files, names=s, sample=s)
@@ -29,14 +34,19 @@ wide <- importAllelicCounts(coldata, a1="P", a2="M",
                             format="wide",
                             ignoreAfterBar=TRUE)
 
-assayNames(wide)
+#suffix <- "oracle"
+#suffix <- "txp"
+#suffix <- "tss"
+#suffix <- "gene"
 
-save(wide, file="se.oracle.rda")
-#save(wide, file="se.txp.rda")
+#save(wide, file=paste0("data/se_",suffix,".rda"))
+
 # load object
-#load("/proj/milovelab/wu/bulk-ase/ase-analysis/Bootstrap_Analysis/wide.txp.b+.rda")
-#load("/proj/milovelab/wu/bulk-ase/ase-analysis/Bootstrap_Analysis/wide.oracle.b+.rda")
-#load("/proj/milovelab/wu/bulk-ase/ase-analysis/Bootstrap_Analysis/wide.oracle.b.rda")
+#suffix <- "oracle"
+#suffix <- "txp"
+#suffix <- "tss"
+#suffix <- "gene"
+load(file=paste0("data/se_",suffix,".rda"))
 
 y <- wide
 y <- labelKeep(y)
@@ -44,44 +54,13 @@ y <- y[mcols(y)$keep,]
 set.seed(1)
 y <- swish(y, x="allele", pair="sample")
 
-table(mcols(y)$qvalue < .01)
-hist(mcols(y)$pvalue, col="grey")
-
-# oracle
-alpha <- .01
-sig_txps <- rownames(y)[mcols(y)$qvalue < alpha]
-table(grepl("-2$", sig_txps))
-table(ai=!grepl("-2$", rownames(y)), sig=mcols(y)$qvalue < alpha)
-prop.table(table(ai=!grepl("-2$", rownames(y)), sig=mcols(y)$qvalue < alpha), 2)
-
-# txp-level
-mcols(y)$abund <- mcols(txps)[rownames(y),"abundance"]
-
-sig <- mcols(y)$qvalue < 0.1
-ai <- mcols(y)$abund != 2
-table(ai, sig)
+mcols(y)$keep <- NULL
+#write.table(mcols(y), file=paste0("res/",suffix,".tsv"), sep="\t",quote=FALSE)
 
 ###
 
-# check structure in plot
+truth <- mcols(txps)[,c("gene_id","tss","abundance","txp_groups","tss_groups")]
+#write.table(truth, file="truth.tsv", sep="\t",quote=FALSE)
 
-load("se.txp.rda")
-y <- wide
-y <- labelKeep(y)
-y <- y[mcols(y)$keep,]
-y <- computeInfRV(y)
-#y2 <- y[1:2000,]
-out <- swish(y, x="allele", pair="sample", returnNull=TRUE)
-sigma <- sqrt(rowVars(out$nulls))
-mcols(y)$mean <- rowMeans(assay(y))
-mcols(y)$abund <- mcols(txps)[rownames(y),"abundance"]
-plot(log10(mcols(y)$meanInfRV+.1), log10(sigma), cex=.2, col=ifelse(mcols(y2)$abund == 2,1,2))
-plot(log10(mcols(y)$meanInfRV+.1), log10(sigma), cex=.2)
-idx <- rowSums(assay(y) == 0) == 1
-plot(log10(mcols(y)$meanInfRV+.1), log10(sigma), cex=1, col=ifelse(idx, 2, 1), pch=20)
-plot(log10(mcols(y)$meanInfRV+.1), log10(mcols(y)$mean), cex=1, col=ifelse(idx, 2, 1), pch=20)
-idx2 <- rowMedians(abs(assay(y)[,1:10] - assay(y)[,11:20])) < 1
-plot(log10(mcols(y)$meanInfRV+.1), log10(mcols(y)$mean), cex=1, col=ifelse(idx2, 2, 1), pch=20)
-plot(log10(mcols(y)$meanInfRV+.1), log10(sigma), cex=1, col=ifelse(idx2, 2, 1), pch=20)
+###
 
-idx3 <- rownames(y)[idx2]
