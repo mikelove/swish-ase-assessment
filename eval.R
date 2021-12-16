@@ -40,9 +40,6 @@ cp <- calculate_performance(cd,
                             thrs=c(.01,.05,.1),
                             thr_venn=.05)
 
-# the raw data, calculated at thresholds and across categories
-head(tpr(cp))
-
 cobraplot <- prepare_data_for_plot(cp,
                                    colorscheme=cols,
                                    facetted=TRUE,
@@ -63,7 +60,8 @@ plot_fdrtprcurve(cobraplot,
 
 # FDR and number
 plot_fdrnbrcurve(prepare_data_for_plot(cp, colorscheme=cols),
-                 xaxisrange=xrng) + ggplot2::ylim(0,7500)
+                 xaxisrange=xrng) +
+  ggplot2::ylim(0,4500)
 
 # upset plot
 plot_upset(prepare_data_for_plot(cp, colorscheme=cols),
