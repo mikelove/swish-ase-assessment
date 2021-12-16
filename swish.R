@@ -1,7 +1,6 @@
 suppressPackageStartupMessages(library(SummarizedExperiment))
 library(tximeta)
-library(devtools)
-load_all("/proj/milovelab/love/proj/fishpond/fishpond")
+library(fishpond)
 
 # import tx2gene
 dir <- "../ase-sim/quants"
@@ -20,7 +19,9 @@ if (FALSE) {
   write.table(t2g, file="t2g.gene.tsv", quote=FALSE, row.names=FALSE)
 }
 
-#t2g <- read.table("t2g.oracle.tsv", header=TRUE)
+t2g <- read.table("t2g.oracle.tsv", header=TRUE)
+t2g <- read.table("t2g.tss.tsv", header=TRUE)
+t2g <- read.table("t2g.gene.tsv", header=TRUE)
 
 s <- paste0("samp",seq_along(files))
 coldata <- data.frame(files=files, names=s, sample=s)
@@ -29,7 +30,7 @@ wide <- importAllelicCounts(coldata, a1="P", a2="M",
                             tx2gene=t2g,
                             ignoreAfterBar=TRUE)
 
-# no summarization
+# no summarization = txp
 wide <- importAllelicCounts(coldata, a1="P", a2="M",
                             format="wide",
                             ignoreAfterBar=TRUE)
@@ -37,15 +38,10 @@ wide <- importAllelicCounts(coldata, a1="P", a2="M",
 #suffix <- "oracle"
 #suffix <- "txp"
 #suffix <- "tss"
-#suffix <- "gene"
+suffix <- "gene"
 
-#save(wide, file=paste0("data/se_",suffix,".rda"))
+save(wide, file=paste0("data/se_",suffix,".rda"))
 
-# load object
-#suffix <- "oracle"
-#suffix <- "txp"
-#suffix <- "tss"
-#suffix <- "gene"
 load(file=paste0("data/se_",suffix,".rda"))
 
 y <- wide
@@ -55,7 +51,7 @@ set.seed(1)
 y <- swish(y, x="allele", pair="sample")
 
 mcols(y)$keep <- NULL
-#write.table(mcols(y), file=paste0("res/",suffix,".tsv"), sep="\t",quote=FALSE)
+write.table(mcols(y), file=paste0("res/",suffix,".tsv"), sep="\t",quote=FALSE)
 
 ###
 
