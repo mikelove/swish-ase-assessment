@@ -1,7 +1,6 @@
 suppressPackageStartupMessages(library(SummarizedExperiment))
 library(tximeta)
-library(devtools)
-load_all("/proj/milovelab/love/proj/fishpond/fishpond")
+library(fishpond)
 
 # import tx2gene
 dir <- "../ase-sim/quants"
@@ -10,14 +9,14 @@ files <- file.path(dir, samps, "quant.sf")
 
 if (FALSE) {
   load("../ase-sim/granges.rda")
-  mcols(txps)$txp_groups <- paste0(txps$gene_id, "-", round(txps$abundance,2))
-  t2g <- data.frame(txp=names(txps), gene=txps$txp_groups)
-  write.table(t2g, file="t2g.oracle.tsv", quote=FALSE, row.names=FALSE)
+  mcols(txps)$oracle_groups <- paste0(txps$gene_id, "-", round(txps$abundance,2))
   mcols(txps)$tss_groups <- paste0(txps$gene_id, "-", round(txps$tss,2))
-  t2g <- data.frame(txp=names(txps), gene=txps$tss_groups)
-  write.table(t2g, file="t2g.tss.tsv", quote=FALSE, row.names=FALSE)
-  t2g <- data.frame(txp=names(txps), gene=txps$gene_id)
-  write.table(t2g, file="t2g.gene.tsv", quote=FALSE, row.names=FALSE)
+  mcols(txps)$gene_groups <- txps$gene_id
+  for (x in c("oracle","tss","gene")) {
+    t2g <- data.frame(txp=names(txps),
+                      gene=mcols(txps)[paste0(x, "_groups")])
+    write.table(t2g, file=paste0("t2g.",x,".tsv"), quote=FALSE, row.names=FALSE)
+  }
 }
 
 #t2g <- read.table("t2g.oracle.tsv", header=TRUE)
@@ -55,12 +54,10 @@ set.seed(1)
 y <- swish(y, x="allele", pair="sample")
 
 mcols(y)$keep <- NULL
-#write.table(mcols(y), file=paste0("res/",suffix,".tsv"), sep="\t",quote=FALSE)
+write.table(mcols(y), file=paste0("res/",suffix,".tsv"), sep="\t",quote=FALSE)
 
 ###
 
+load("../ase-sim/granges.rda")
 truth <- mcols(txps)[,c("gene_id","tss","abundance","txp_groups","tss_groups")]
-#write.table(truth, file="truth.tsv", sep="\t",quote=FALSE)
-
-###
-
+write.table(truth, file="truth.tsv", sep="\t",quote=FALSE)
