@@ -56,5 +56,5 @@ write.table(mcols(y), file=paste0("res/",suffix,".tsv"), sep="\t",quote=FALSE)
 ###
 
 load("../ase-sim/granges.rda")
-truth <- mcols(txps)[,c("gene_id","tss","abundance","txp_groups","tss_groups")]
+truth <- mcols(txps)[,c("gene_id","tss","abundance","oracle_groups","tss_groups")]
 write.table(truth, file="truth.tsv", sep="\t",quote=FALSE)

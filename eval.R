@@ -1,35 +1,41 @@
 library(iCOBRA)
 
-cols <- palette()[2:6]
-meths <- c("txp","gene","tss","oracle")
-names(cols)[1:4] <- meths
+cols <- palette.colors()[1:5]
+types <- c("txp","gene","tss","oracle")
+names(cols)[1:4] <- types
 names(cols)[5] <- "truth"
 
 library(dplyr)
 library(tibble)
 
+# For iCOBRA need to make a truth table and a padj table
+# here complicated by the fact that we have different levels
+# of resolution of analysis. A simpliciation is to just
+# evaluate everything at transcript level. We can propagate
+# the q-values from inner nodes to the leaves and evaluate
+# transcript level sensitivity and FDR
 truth <- read.delim("truth.tsv")
-truth <- truth %>% mutate(status = ifelse(abundance == 2, 0, 1))
+truth <- truth %>%
+  mutate(gene_groups = gene_id,
+         status = ifelse(abundance == 2, 0, 1))         
 truth_tb <- truth %>% rownames_to_column("txp") %>% tibble()
 
 padj <- data.frame(row.names=rownames(truth))
 
-match_col <- c(gene="gene_id", tss="tss_groups", oracle="txp_groups")
-
-for (m in meths) {
-  res <- read.delim(paste0("res/",m,".tsv"))
-  if (m == "txp") {
-    # just directly add the qvalues
-    padj[[m]] <- 1
-    padj[rownames(res),m] <- res$qvalue
+for (t in types) {
+  res <- read.delim(paste0("res/",t,".tsv"))
+  if (t == "txp") {
+    # just directly add the qvalues from txp-level
+    padj$txp <- 1
+    padj[rownames(res),"txp"] <- res$qvalue
   } else {
-    # first join with the txp-level information
+    # first join inner-node anlaysis to the txp-level table
     res_tb <- res %>% select(qvalue) %>%
-      rownames_to_column(match_col[m]) %>%
+      rownames_to_column(paste0(t,"_groups")) %>% # this will allow joining
       tibble() %>%
-      inner_join(truth_tb)
-    padj[[m]] <- 1
-    padj[res_tb$txp,m] <- res_tb$qvalue
+      inner_join(truth_tb) # join with the truth table which has txp ID
+    padj[[t]] <- 1 # pre-populate with 1
+    padj[res_tb$txp, t] <- res_tb$qvalue # add the q-values when we have them
   }
 }
 
@@ -40,29 +46,23 @@ cp <- calculate_performance(cd,
                             thrs=c(.01,.05,.1),
                             thr_venn=.05)
 
-cobraplot <- prepare_data_for_plot(cp,
-                                   colorscheme=cols,
-                                   facetted=TRUE,
-                                   incloverall=TRUE)
+cp <- prepare_data_for_plot(cp, colorscheme=cols)
 
 # simple plot
-plot_tpr(cobraplot, pointsize=2.5)
+plot_tpr(cp, pointsize=2.5)
 
 # TPR over FDR
 yrng <- c(0,1)
-xrng <- c(0,.5)
-plot_fdrtprcurve(cobraplot,
+xrng <- c(0,.15)
+plot_fdrtprcurve(cp,
                  plottype="points",
-                 pointsize=2.5,
                  xaxisrange=xrng,
                  yaxisrange=yrng,
                  title="txp-level AI testing")
 
 # FDR and number
-plot_fdrnbrcurve(prepare_data_for_plot(cp, colorscheme=cols),
-                 xaxisrange=xrng) +
+plot_fdrnbrcurve(cp, xaxisrange=xrng) +
   ggplot2::ylim(0,4500)
 
 # upset plot
-plot_upset(prepare_data_for_plot(cp, colorscheme=cols),
-           order.by="freq", nintersects=10)
+plot_upset(cp, order.by="freq", nintersects=10)
