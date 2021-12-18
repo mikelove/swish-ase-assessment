@@ -19,39 +19,36 @@ if (FALSE) {
   }
 }
 
-t2g <- read.table("t2g.oracle.tsv", header=TRUE)
-t2g <- read.table("t2g.tss.tsv", header=TRUE)
-t2g <- read.table("t2g.gene.tsv", header=TRUE)
+types <- c("txp","oracle","gene","tss")
+for (t in types) {
+  s <- paste0("samp",seq_along(files))
+  coldata <- data.frame(files=files, names=s, sample=s)
+  if (t == "txp") {
+    # no summarization = txp
+    wide <- importAllelicCounts(coldata, a1="P", a2="M",
+                                format="wide",
+                                ignoreAfterBar=TRUE)
+  } else {
+    t2g <- read.table(paste0("t2g.",t,".tsv"), header=TRUE)
+    wide <- importAllelicCounts(coldata, a1="P", a2="M",
+                                format="wide",
+                                tx2gene=t2g,
+                                ignoreAfterBar=TRUE)
+  }
+  save(wide, file=paste0("data/se_",t,".rda"))
+}
 
-s <- paste0("samp",seq_along(files))
-coldata <- data.frame(files=files, names=s, sample=s)
-wide <- importAllelicCounts(coldata, a1="P", a2="M",
-                            format="wide",
-                            tx2gene=t2g,
-                            ignoreAfterBar=TRUE)
-
-# no summarization = txp
-wide <- importAllelicCounts(coldata, a1="P", a2="M",
-                            format="wide",
-                            ignoreAfterBar=TRUE)
-
-#suffix <- "oracle"
-#suffix <- "txp"
-#suffix <- "tss"
-suffix <- "gene"
-
-save(wide, file=paste0("data/se_",suffix,".rda"))
-
-load(file=paste0("data/se_",suffix,".rda"))
-
-y <- wide
-y <- labelKeep(y)
-y <- y[mcols(y)$keep,] 
-set.seed(1)
-y <- swish(y, x="allele", pair="sample")
-
-mcols(y)$keep <- NULL
-write.table(mcols(y), file=paste0("res/",suffix,".tsv"), sep="\t",quote=FALSE)
+types <- c("txp","oracle","gene","tss")
+for (t in types) {
+  load(file=paste0("data/se_",t,".rda"))
+  y <- wide
+  y <- labelKeep(y)
+  y <- y[mcols(y)$keep,] 
+  set.seed(1)
+  y <- swish(y, x="allele", pair="sample")
+  mcols(y)$keep <- NULL
+  write.table(mcols(y), file=paste0("res/",t,".tsv"), sep="\t",quote=FALSE)
+}
 
 ###
 
