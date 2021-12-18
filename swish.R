@@ -15,7 +15,7 @@ if (FALSE) {
   for (x in c("oracle","tss","gene")) {
     t2g <- data.frame(txp=names(txps),
                       gene=mcols(txps)[paste0(x, "_groups")])
-    write.table(t2g, file=paste0("t2g.",x,".tsv"), quote=FALSE, row.names=FALSE)
+    write.table(t2g, file=paste0("t2g_",x,".tsv"), quote=FALSE, row.names=FALSE)
   }
 }
 
@@ -29,7 +29,7 @@ for (t in types) {
                                 format="wide",
                                 ignoreAfterBar=TRUE)
   } else {
-    t2g <- read.table(paste0("t2g.",t,".tsv"), header=TRUE)
+    t2g <- read.table(paste0("t2g_",t,".tsv"), header=TRUE)
     wide <- importAllelicCounts(coldata, a1="P", a2="M",
                                 format="wide",
                                 tx2gene=t2g,
