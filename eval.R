@@ -24,6 +24,7 @@ padj <- data.frame(row.names=rownames(truth))
 
 for (t in types) {
   res <- read.delim(paste0("res/",t,".tsv"))
+  res <- read.delim(paste0("res/bb_",t,".tsv"))
   if (t == "txp") {
     # just directly add the qvalues from txp-level
     padj$txp <- 1
@@ -49,20 +50,23 @@ cp <- calculate_performance(cd,
 cp <- prepare_data_for_plot(cp, colorscheme=cols)
 
 # simple plot
-plot_tpr(cp, pointsize=2.5)
+# plot_tpr(cp, pointsize=2.5)
 
 # TPR over FDR
 yrng <- c(0,1)
-xrng <- c(0,.15)
+#xrng <- c(0,.15)
+xrng <- c(0,.2)
 plot_fdrtprcurve(cp,
                  plottype="points",
                  xaxisrange=xrng,
                  yaxisrange=yrng,
                  title="txp-level AI testing")
 
-# FDR and number
-plot_fdrnbrcurve(cp, xaxisrange=xrng) +
-  ggplot2::ylim(0,4500)
-
-# upset plot
-plot_upset(cp, order.by="freq", nintersects=10)
+if (FALSE) {
+  # FDR and number
+  plot_fdrnbrcurve(cp, xaxisrange=xrng) +
+    ggplot2::ylim(0,4500)
+  
+  # upset plot
+  plot_upset(cp, order.by="freq", nintersects=10)
+}
