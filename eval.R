@@ -17,15 +17,16 @@ library(tibble)
 truth <- read.delim("truth.tsv")
 truth <- truth %>%
   mutate(gene_groups = gene_id,
-         status = ifelse(abundance == 2, 0, 1))         
+         status = ifelse(abundance == 2, 0, 1),
+         group = case_when(isoAI ~ "iso", geneAI ~ "gene", TRUE ~ "null"))
 truth_tb <- truth %>% rownames_to_column("txp") %>% tibble()
 
 padj <- data.frame(row.names=rownames(truth))
 
 for (t in types) {
-  #res <- read.delim(paste0("res/",t,".tsv"))
+  res <- read.delim(paste0("res/",t,".tsv"))
   #res <- read.delim(paste0("res/bb_",t,".tsv"))
-  res <- read.delim(paste0("res/deseq2_",t,".tsv"))
+  #res <- read.delim(paste0("res/deseq2_",t,".tsv"))
   if (t == "txp") {
     # just directly add the qvalues from txp-level
     padj$txp <- 1
@@ -45,18 +46,19 @@ cd <- COBRAData(padj=padj, truth=truth)
 cp <- calculate_performance(cd,
                             binary_truth="status",
                             aspect=c("tpr","fdr","fdrtpr","fdrnbr","fdrtprcurve","overlap"),
+                            splv="group",
                             thrs=c(.01,.05,.1),
                             thr_venn=.05)
 
 cp <- prepare_data_for_plot(cp, colorscheme=cols)
 
 # simple plot
-# plot_tpr(cp, pointsize=2.5)
+plot_tpr(cp, pointsize=2.5)
 
 # TPR over FDR
 yrng <- c(0,1)
-#xrng <- c(0,.15)
-xrng <- c(0,.2)
+xrng <- c(0,.15)
+#xrng <- c(0,.2)
 plot_fdrtprcurve(cp,
                  plottype="points",
                  xaxisrange=xrng,

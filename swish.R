@@ -52,6 +52,5 @@ for (t in types) {
 
 ###
 
-load("../ase-sim/granges.rda")
-truth <- mcols(txps)[,c("gene_id","tss","abundance","oracle_groups","tss_groups")]
+truth <- mcols(txps)[,c("gene_id","tss","abundance","oracle_groups","tss_groups","isoAI","geneAI")]
 write.table(truth, file="truth.tsv", sep="\t",quote=FALSE)
