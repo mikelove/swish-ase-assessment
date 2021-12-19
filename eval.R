@@ -23,8 +23,9 @@ truth_tb <- truth %>% rownames_to_column("txp") %>% tibble()
 padj <- data.frame(row.names=rownames(truth))
 
 for (t in types) {
-  res <- read.delim(paste0("res/",t,".tsv"))
-  res <- read.delim(paste0("res/bb_",t,".tsv"))
+  #res <- read.delim(paste0("res/",t,".tsv"))
+  #res <- read.delim(paste0("res/bb_",t,".tsv"))
+  res <- read.delim(paste0("res/deseq2_",t,".tsv"))
   if (t == "txp") {
     # just directly add the qvalues from txp-level
     padj$txp <- 1
