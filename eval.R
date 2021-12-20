@@ -1,9 +1,10 @@
 library(iCOBRA)
 
-cols <- palette.colors()[1:5]
+cols <- palette.colors()[1:6]
 types <- c("txp","gene","tss","oracle")
 names(cols)[1:4] <- types
 names(cols)[5] <- "truth"
+names(cols)[6] <- "wasp"
 
 library(dplyr)
 library(tibble)
@@ -42,10 +43,24 @@ for (t in types) {
   }
 }
 
+wasp <- TRUE
+if (wasp) {
+  library(dplyr)
+  library(ggplot2)
+  wasp <- read.table("../ase-sim/wasp_cht/cht_results.txt", header=TRUE)
+  wasp <- wasp %>% mutate(ratio=ALT.AS.READ.COUNT/REF.AS.READ.COUNT,
+                  total=TOTAL.AS.READ.COUNT,
+                  pvalue=P.VALUE)
+  wasp %>% filter(total > 50 & total < 1e5) %>%
+    ggplot(aes(total, log2(ratio), col=-log10(pvalue+1e-15))) +
+    geom_point() + ylim(-.5, .5)
+  load("../ase-sim/granges.rda")
+}
 cd <- COBRAData(padj=padj, truth=truth)
 cp <- calculate_performance(cd,
                             binary_truth="status",
-                            aspect=c("tpr","fdr","fdrtpr","fdrnbr","fdrtprcurve","overlap"),
+                            aspect=c("tpr","fdr","fdrtpr","fdrnbr",
+                                     "fdrtprcurve","overlap"),
                             splv="group",
                             thrs=c(.01,.05,.1),
                             thr_venn=.05)
