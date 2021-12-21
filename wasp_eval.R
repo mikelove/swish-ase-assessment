@@ -6,7 +6,6 @@ names(cols)[6] <- "wasp"
 
 library(dplyr)
 library(ggplot2)
-library(plyranges)
 wasp <- read.table("../ase-sim/wasp_cht/cht_results.txt", header=TRUE)
 wasp <- wasp %>% mutate(
                    start=as.numeric(sapply(strsplit(REGION.START,";"), head, 1)),
@@ -15,20 +14,39 @@ wasp <- wasp %>% mutate(
   select(seqnames=TEST.SNP.CHROM, start, end,
          snp=TEST.SNP.POS, ratio,
          total=TOTAL.AS.READ.COUNT, pvalue=P.VALUE) %>%
-  as_granges()
+  tibble()
+# remove duplicate rows
+wasp <- wasp %>% mutate(id = paste(seqnames, start, end, snp, sep="-")) %>%
+  filter(!duplicated(id))
+sum(duplicated(wasp$snp))
 
 # plot
 ## wasp %>% filter(total > 50 & total < 1e5) %>%
-##   as.data.frame() %>%
 ##   ggplot(aes(total, log2(ratio), col=-log10(pvalue+1e-15))) +
 ##   geom_point() + coord_cartesian(ylim=c(-.5, .5))
 
 # load truth to identify gene from WASP SNP-level results
 library(plyranges)
 load("../ase-sim/granges.rda")
-g <- g %>% select(gene_id, isoAI, geneAI)
-wasp <- wasp %>% join_overlap_left_within(g)
-stopifnot(all(!is.na(wasp$gene_id)))
+txps <- txps %>%
+  select(tx_id, gene_id, snp_loc, isoAI, geneAI) %>%
+  mutate(snp = min(snp_loc))
+strand(txps) <- "*"
+# ~1 minute
+system.time({
+  genes <- txps %>%
+    group_by(gene_id) %>%
+    reduce_ranges(snp=min(snp), isoAI=any(isoAI), geneAI=any(geneAI))
+})
+genes_tb <- genes %>% as.data.frame() %>%
+  mutate(id = paste(seqnames, start, end, snp, sep="-")) %>%
+  tibble()
+
+# this adds gene_id and other variables
+wasp <- wasp %>% left_join(genes_tb)
+
+# all matches, no duplicates
+table(is.na(wasp$gene_id))
 sum(duplicated(wasp$gene_id))
 
 wasp %>% as.data.frame() %>%
