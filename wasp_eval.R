@@ -49,41 +49,72 @@ wasp <- wasp %>% left_join(genes_tb)
 table(is.na(wasp$gene_id))
 sum(duplicated(wasp$gene_id))
 
-wasp %>% as.data.frame() %>%
+# create q-value
+min_p <- min(wasp$pvalue[wasp$pvalue > 0])
+wasp <- wasp %>%
+  mutate(pvalue=ifelse(pvalue == 0, min_p, pvalue), 
+         qvalue=p.adjust(pvalue, method="BH"))
+
+# create locfdr
+z <- qnorm(wasp$pvalue, lower.tail=FALSE)
+library(locfdr)
+fit <- locfdr(z)
+fdr <- fit$fdr
+fdr[z < 0] <- 1
+wasp$locfdr <- fdr
+wasp %>% ggplot(aes(qvalue, fdr)) + geom_point()
+
+# check on overlaps for FPs
+fp_gene_ids <- wasp %>% filter(pvalue < .1 & !isoAI & !geneAI) %>% pull(gene_id)
+fp_genes <- g[fp_gene_ids] %>% select(isoAI, geneAI)
+ai_genes <- genes %>% filter(isoAI | geneAI) %>% select(isoAI, geneAI)
+
+overlap_fps <- fp_genes %>% join_overlap_inner(ai_genes, maxgap=100) %>% names()
+length(overlap_fps)
+
+wasp %>%
+  mutate(pvalue = ifelse(gene_id %in% overlap_fps, NA, pvalue)) %>%
   mutate(AI=factor(isoAI | geneAI, levels=c("TRUE","FALSE"))) %>% 
   ggplot(aes(x=pvalue, fill=AI)) + geom_histogram() +
   ggtitle("WASP gene-level p-values")
 
-wasp_qval <- wasp %>% select(gene_id, pvalue, .drop_ranges=TRUE) %>%
-  as.data.frame() %>% tibble()
+# propagate locfdr / q-values to txps
+t2g <- txps %>% select(tx_id, gene_id, .drop_ranges=TRUE) %>%
+  as.data.frame %>% tibble()
+wasp_qval <- wasp %>% select(gene_id, qvalue=locfdr) %>%
+    mutate(qvalue = ifelse(gene_id %in% overlap_fps, 1, qvalue)) %>%
+  left_join(t2g) %>%
+  select(qvalue, tx_id)
 
-###
-
-  distinct(gene_id, pvalue) %>%
-  mutate(qvalue=p.adjust(pvalue, method="BH"))
-wasp_qval <- wasp_qval %>% filter(!duplicated(gene_id)) %>%
-  inner_join(dat) %>% select(qvalue, txp)
-
-# need to run eval.R script to build 'padj'
+# need to run eval.R script to build 'padj' and 'truth'
 
 padj$wasp <- 1
-padj[wasp_qval$txp,"wasp"] <- wasp_qval$qvalue
+padj[wasp_qval$tx_id,"wasp"] <- wasp_qval$qvalue
 
-cpnf <- calculate_performance(cd,
-                              binary_truth="status",
-                              aspect=c("tpr","fdr","fdrtpr","fdrnbr",
-                                       "fdrtprcurve","overlap"),
-                              thrs=c(.01,.05,.1),
-                              thr_venn=.05)
+cd <- COBRAData(padj=padj, truth=truth)
+cp <- calculate_performance(cd,
+                            binary_truth="status",
+                            aspect=c("tpr","fdr","fdrtpr","fdrnbr",
+                                     "fdrtprcurve","overlap"),
+                            thrs=c(.01,.05,.1),
+                            thr_venn=.05)
 
-cplotnf <- prepare_data_for_plot(cpnf, colorscheme=cols)
+cplot <- prepare_data_for_plot(cp, colorscheme=cols)
 
 # simple plot
 plot_tpr(cplot, pointsize=2.5)
 
+xrng <- c(0,.15)
+yrng <- c(0,1)
+plot_fdrtprcurve(cplot,
+                 plottype="points",
+                 xaxisrange=xrng,
+                 yaxisrange=yrng,
+                 title="txp-level AI testing")
+
 # FDR and number
-plot_fdrnbrcurve(cplotnf, xaxisrange=xrng) +
+plot_fdrnbrcurve(cplot, xaxisrange=xrng) +
   ggplot2::ylim(0,4500)
 
 # upset plot
-plot_upset(cplotnf, order.by="freq", nintersects=10)
+plot_upset(cplot, order.by="freq", nintersects=10)

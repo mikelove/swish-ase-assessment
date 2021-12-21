@@ -63,7 +63,7 @@ cp <- calculate_performance(cd,
 cplot <- prepare_data_for_plot(cp, colorscheme=cols)
 xrng <- c(0,.15)
 yrng <- c(0,1)
-plot_fdrtprcurve(cplotnf,
+plot_fdrtprcurve(cplot,
                  plottype="points",
                  xaxisrange=xrng,
                  yaxisrange=yrng,
