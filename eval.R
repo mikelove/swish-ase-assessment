@@ -33,7 +33,7 @@ truth_tb <- truth %>% rownames_to_column("txp") %>% tibble()
 padj <- data.frame(row.names=rownames(truth))
 
 # loop of diferrent levels of analysis:
-for (t in types) {
+for (t in setdiff(types, "mmdiff")) {
   res <- read.delim(paste0("res/",t,".tsv")) # read swish results
   if (t == "txp") {
     # directly add the qvalues from txp-level
