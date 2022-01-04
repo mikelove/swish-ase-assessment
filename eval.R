@@ -1,13 +1,13 @@
-# Dec 20 2021
+# Jan 4 2022
 
 library(iCOBRA)
 library(dplyr)
 library(tibble)
 
-cols <- palette.colors()[1:5]
-types <- c("txp","gene","tss","oracle")
-names(cols)[1:4] <- types
-names(cols)[5] <- "truth"
+cols <- palette.colors()[1:6]
+types <- c("txp","gene","tss","oracle","mmdiff")
+names(cols)[1:5] <- types
+names(cols)[6] <- "truth"
 
 # Motivation for this script:
 
@@ -49,6 +49,11 @@ for (t in types) {
     padj[res_tb$txp, t] <- res_tb$qvalue # add the q-values for matching rows
   }
 }
+
+# add mmdiff results
+mmdiff <- read.table("../ase-sim/mmseq/mmdiff_results.txt", header=TRUE)
+padj$mmdiff <- 1
+padj[mmdiff$feature_id,"mmdiff"] <- mmdiff$posterior_probability
 
 # ok now 'padj' is done and we can just run iCOBRA directly:
 
