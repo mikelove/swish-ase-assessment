@@ -53,7 +53,7 @@ for (t in setdiff(types, "mmdiff")) {
 # add mmdiff results
 mmdiff <- read.table("../ase-sim/mmseq/mmdiff_results.txt", header=TRUE)
 padj$mmdiff <- 1
-padj[mmdiff$feature_id,"mmdiff"] <- mmdiff$posterior_probability
+padj[mmdiff$feature_id,"mmdiff"] <- 1 - mmdiff$posterior_probability
 
 # ok now 'padj' is done and we can just run iCOBRA directly:
 
