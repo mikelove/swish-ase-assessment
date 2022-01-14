@@ -25,7 +25,7 @@ truth <- truth %>%
   mutate(gene_groups = gene_id,
          mmdiff_gene_groups = gene_id,
          status = ifelse(abundance == 2, 0, 1),
-         group = case_when(isoAI ~ "iso", geneAI ~ "gene", TRUE ~ "null"))
+         AI = case_when(isoAI ~ "iso", geneAI ~ "gene", TRUE ~ "null"))
 # iCOBRA wants a data.frame with rownames
 # but we need rownames as a column for dplyr's inner_join()
 truth_tb <- truth %>% rownames_to_column("txp") %>% tibble()
@@ -64,7 +64,7 @@ cp <- calculate_performance(cd,
                             binary_truth="status",
                             aspect=c("tpr","fdr","fdrtpr","fdrnbr",
                                      "fdrtprcurve","overlap"),
-                            splv="group", # breaks across isoAI / geneAI / null
+                            splv="AI", # breaks across isoAI / geneAI / null
                             thrs=c(.01,.05,.1),
                             thr_venn=.05)
 cplot <- prepare_data_for_plot(cp, colorscheme=cols)
