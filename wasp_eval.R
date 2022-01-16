@@ -1,22 +1,21 @@
-cols <- palette.colors()[1:6]
+cols <- palette.colors()[c(1:4,6:7)]
 types <- c("txp","gene","tss","oracle")
 names(cols)[1:4] <- types
 names(cols)[5] <- "truth"
 names(cols)[6] <- "wasp"
 
+library(tibble)
 library(dplyr)
 library(ggplot2)
+
 wasp <- read.table("../ase-sim/wasp_cht/cht_results.txt", header=TRUE)
-wasp <- wasp %>% mutate(
-                   start=as.numeric(sapply(strsplit(REGION.START,";"), head, 1)),
-                   end=as.numeric(sapply(strsplit(REGION.END,";"), tail, 1)),
-                   ratio=ALT.AS.READ.COUNT/REF.AS.READ.COUNT) %>%
-  select(seqnames=TEST.SNP.CHROM, start, end,
+wasp <- wasp %>% mutate(ratio=ALT.AS.READ.COUNT/REF.AS.READ.COUNT) %>%
+  select(chr=TEST.SNP.CHROM, start=REGION.START, end=REGION.END,
          snp=TEST.SNP.POS, ratio,
          total=TOTAL.AS.READ.COUNT, pvalue=P.VALUE) %>%
   tibble()
 # remove duplicate rows
-wasp <- wasp %>% mutate(id = paste(seqnames, start, end, snp, sep="-")) %>%
+wasp <- wasp %>% mutate(id = paste(chr, snp, start, end, sep="-")) %>%
   filter(!duplicated(id))
 sum(duplicated(wasp$snp))
 
@@ -25,85 +24,73 @@ sum(duplicated(wasp$snp))
 ##   ggplot(aes(total, log2(ratio), col=-log10(pvalue+1e-15))) +
 ##   geom_point() + coord_cartesian(ylim=c(-.5, .5))
 
-# load truth to identify gene from WASP SNP-level results
-library(plyranges)
-load("../ase-sim/granges.rda")
-txps <- txps %>%
-  select(tx_id, gene_id, snp_loc, isoAI, geneAI) %>%
-  mutate(snp = min(snp_loc))
-strand(txps) <- "*"
-# ~1 minute
-system.time({
-  genes <- txps %>%
-    group_by(gene_id) %>%
-    reduce_ranges(snp=min(snp), isoAI=any(isoAI), geneAI=any(geneAI))
-})
-genes_tb <- genes %>% as.data.frame() %>%
-  mutate(id = paste(seqnames, start, end, snp, sep="-")) %>%
-  tibble()
+load("../ase-sim/data/drosophila_test_target.rda")
 
-# this adds gene_id and other variables
-wasp <- wasp %>% left_join(genes_tb)
+test_target <- wasp_test_target %>% mutate(id = paste(chr, pos, tstart, tend, sep="-")) %>%
+  select(id, gene_id) %>% tibble()
+# this adds gene_id
+wasp <- wasp %>% left_join(test_target)
 
-# all matches, no duplicates
+# all matches, some duplicate tests
 table(is.na(wasp$gene_id))
+sum(duplicated(wasp$id))
+wasp <- wasp %>% filter(!duplicated(id))
 sum(duplicated(wasp$gene_id))
 
-# create q-value
+# cutoff at min p
 min_p <- min(wasp$pvalue[wasp$pvalue > 0])
 wasp <- wasp %>%
-  mutate(pvalue=ifelse(pvalue == 0, min_p, pvalue), 
-         qvalue=p.adjust(pvalue, method="BH"))
-
-# create locfdr
-z <- qnorm(wasp$pvalue, lower.tail=FALSE)
-library(locfdr)
-fit <- locfdr(z)
-fdr <- fit$fdr
-fdr[z < 0] <- 1
-wasp$locfdr <- fdr
-wasp %>% ggplot(aes(qvalue, fdr)) + geom_point()
+  mutate(pvalue=ifelse(pvalue == 0, min_p, pvalue))
 
 # check on overlaps for FPs
+library(plyranges)
+gene_status <- g %>% select(gene_id, isoAI, geneAI, .drop_ranges=TRUE) %>%
+  as.data.frame() %>% tibble()
+wasp <- wasp %>% left_join(gene_status)
 fp_gene_ids <- wasp %>% filter(pvalue < .1 & !isoAI & !geneAI) %>% pull(gene_id)
 fp_genes <- g[fp_gene_ids] %>% select(isoAI, geneAI)
-ai_genes <- genes %>% filter(isoAI | geneAI) %>% select(isoAI, geneAI)
+ai_genes <- g %>% filter(isoAI | geneAI) %>%
+  select(isoAI, geneAI)
 
 overlap_fps <- fp_genes %>% join_overlap_inner(ai_genes, maxgap=100) %>% names()
 length(overlap_fps)
 
-wasp %>%
-  mutate(pvalue = ifelse(gene_id %in% overlap_fps, NA, pvalue)) %>%
-  mutate(AI=factor(isoAI | geneAI, levels=c("TRUE","FALSE"))) %>% 
-  ggplot(aes(x=pvalue, fill=AI)) + geom_histogram() +
-  ggtitle("WASP gene-level p-values")
+# re-do locfdr calculation
+library(locfdr)
+z <- qnorm(wasp$pvalue, lower.tail=FALSE)
+fit <- locfdr(z)
+fdr <- fit$fdr
+fdr[z < 0] <- 1
+wasp$qvalue <- fdr
+#wasp %>% ggplot(aes(qvalue, fdr)) + geom_point()
 
-# propagate locfdr / q-values to txps
+# propagate q-values to txps
 t2g <- txps %>% select(tx_id, gene_id, .drop_ranges=TRUE) %>%
   as.data.frame %>% tibble()
-wasp_qval <- wasp %>% select(gene_id, qvalue=locfdr) %>%
+wasp_qval <- wasp %>% select(gene_id, qvalue) %>%
     mutate(qvalue = ifelse(gene_id %in% overlap_fps, 1, qvalue)) %>%
   left_join(t2g) %>%
   select(qvalue, tx_id)
 
-# need to run eval.R script to build 'padj' and 'truth'
+### need to run eval.R script to build 'padj' and 'truth' ###
 
 padj$wasp <- 1
 padj[wasp_qval$tx_id,"wasp"] <- wasp_qval$qvalue
 
 cd <- COBRAData(padj=padj, truth=truth)
-cp <- calculate_performance(cd,
-                            binary_truth="status",
-                            aspect=c("tpr","fdr","fdrtpr","fdrnbr",
-                                     "fdrtprcurve","overlap"),
-                            thrs=c(.01,.05,.1),
-                            thr_venn=.05)
-
+if (FALSE) {
+  cp <- calculate_performance(
+    cd, binary_truth="status", aspect="tpr", splv="AI",
+    thrs=c(.01,.05,.1), thr_venn=.05)
+  cplot <- prepare_data_for_plot(cp, colorscheme=cols)
+  plot_tpr(cplot, pointsize=2.5)
+}
+cp <- calculate_performance(
+  cd, binary_truth="status",
+  aspect=c("tpr","fdr","fdrtpr","fdrnbr",
+           "fdrtprcurve","overlap"),
+  thrs=c(.01,.05,.1), thr_venn=.05)
 cplot <- prepare_data_for_plot(cp, colorscheme=cols)
-
-# simple plot
-plot_tpr(cplot, pointsize=2.5)
-
 xrng <- c(0,.15)
 yrng <- c(0,1)
 plot_fdrtprcurve(cplot,
@@ -111,10 +98,3 @@ plot_fdrtprcurve(cplot,
                  xaxisrange=xrng,
                  yaxisrange=yrng,
                  title="txp-level AI testing")
-
-# FDR and number
-plot_fdrnbrcurve(cplot, xaxisrange=xrng) +
-  ggplot2::ylim(0,4500)
-
-# upset plot
-plot_upset(cplot, order.by="freq", nintersects=10)
