@@ -74,5 +74,7 @@ for (t in types) {
 ## write a table that can be used to define truth for iCOBRA ##
 ###############################################################
 
-truth <- mcols(txps)[,c("gene_id","tss","abundance","oracle_groups","tss_groups","isoAI","geneAI")]
+columns <- c("gene_id","tss","abundance","oracle_groups",
+             "tss_groups","isoAI","geneAI")
+truth <- mcols(txps)[,columns]
 write.table(truth, file="truth.tsv", sep="\t",quote=FALSE)

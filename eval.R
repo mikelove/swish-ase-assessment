@@ -4,8 +4,8 @@ library(iCOBRA)
 library(dplyr)
 library(tibble)
 
-cols <- palette.colors(9)[c(1:4,6:8)]
-types <- c("txp","gene","tss","oracle","mmdiff","mmdiff_gene")
+cols <- palette.colors(9)[c(1:4,6:9)]
+types <- c("txp","gene","tss","oracle","mmdiff","mmdiff_gene","tree")
 names(cols)[1:(length(cols)-1)] <- types
 names(cols)[length(cols)] <- "truth"
 
@@ -29,6 +29,11 @@ truth <- truth %>%
 # iCOBRA wants a data.frame with rownames
 # but we need rownames as a column for dplyr's inner_join()
 truth_tb <- truth %>% rownames_to_column("txp") %>% tibble()
+
+# add TreeTerminus grouping
+tree_groups <- read.delim("t2g_tree.tsv")
+truth_tb <- truth_tb %>% left_join(tree_groups) %>%
+  mutate(tree_groups = ifelse(is.na(tree_groups), txp, tree_groups))
 
 # make an empty table which we will add columns to
 padj <- data.frame(row.names=rownames(truth))
