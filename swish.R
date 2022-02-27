@@ -16,9 +16,8 @@ files <- file.path(dir, samps, "quant.sf")
 ## define different levels of aggregation, using granges.rda ##
 ###############################################################
 
-library(plyranges)
-
 if (FALSE) {
+  library(plyranges)
   load("../ase-sim/granges.rda")
   txps <- txps %>%
     mutate(oracle_groups = paste0(gene_id, "-", round(abundance,2)),
@@ -37,6 +36,8 @@ if (FALSE) {
 ## import counts at different level, save SE ##
 ###############################################
 
+load("granges_with_groups.rda")
+
 types <- c("txp","oracle","gene","tss")
 for (t in types) {
   s <- paste0("samp",seq_along(files))
@@ -45,6 +46,7 @@ for (t in types) {
     # no summarization = txp
     se <- importAllelicCounts(coldata, a1="P", a2="M",
                               format="wide",
+
                               ignoreAfterBar=TRUE)
     rowRanges(se) <- txps[rownames(se)]
   } else {

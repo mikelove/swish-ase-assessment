@@ -2,3 +2,4 @@ res
 data
 truth.tsv
 *.tsv
+*.rda
