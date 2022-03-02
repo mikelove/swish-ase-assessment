@@ -37,6 +37,7 @@ if (FALSE) {
 ###############################################
 
 load("granges_with_groups.rda")
+mcols(txps)$width <- NULL
 
 types <- c("txp","oracle","gene","tss")
 for (t in types) {
@@ -46,7 +47,6 @@ for (t in types) {
     # no summarization = txp
     se <- importAllelicCounts(coldata, a1="P", a2="M",
                               format="wide",
-
                               ignoreAfterBar=TRUE)
     rowRanges(se) <- txps[rownames(se)]
   } else {
