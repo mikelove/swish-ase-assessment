@@ -58,7 +58,7 @@ length(overlap_fps)
 # re-do locfdr calculation
 library(locfdr)
 z <- qnorm(wasp$pvalue, lower.tail=FALSE)
-fit <- locfdr(z)
+fit <- locfdr(z) # check plot to examine left tail
 fdr <- fit$fdr
 fdr[z < 0] <- 1
 wasp$qvalue <- fdr
