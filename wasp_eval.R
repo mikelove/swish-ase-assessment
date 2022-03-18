@@ -106,8 +106,7 @@ pdf("figs/sim_with_wasp_fdrtpr.pdf")
 plot_fdrtprcurve(cplot,
                  plottype="points",
                  xaxisrange=xrng,
-                 yaxisrange=yrng,
-                 title="txp-level AI testing")
+                 yaxisrange=yrng)
 dev.off()
 
 pdf(file="figs/sim_with_wasp_upset.pdf")
