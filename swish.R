@@ -76,7 +76,8 @@ for (t in types) {
   mcols(y)$keep <- NULL
   # write results to e.g. 'res/oracle.tsv'
   write.table(mcols(y), file=paste0("res/",t,".tsv"), sep="\t",quote=FALSE)
-  save(y, file=paste0("res/",t,"_se.rda"))
+  # also save SE for plotting
+  save(y, file=paste0("res/se_",t,".rda"))
 }
 
 ###############################################################
