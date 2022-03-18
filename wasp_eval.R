@@ -1,9 +1,3 @@
-cols <- palette.colors()[c(1:4,6:7)]
-types <- c("txp","gene","tss","oracle")
-names(cols)[1:4] <- types
-names(cols)[5] <- "truth"
-names(cols)[6] <- "wasp"
-
 library(tibble)
 library(dplyr)
 library(ggplot2)
@@ -42,6 +36,8 @@ min_p <- min(wasp$pvalue[wasp$pvalue > 0])
 wasp <- wasp %>%
   mutate(pvalue=ifelse(pvalue == 0, min_p, pvalue))
 
+load("../ase-sim/granges.rda")
+
 # check on overlaps for FPs
 library(plyranges)
 gene_status <- g %>% select(gene_id, isoAI, geneAI, .drop_ranges=TRUE) %>%
@@ -74,27 +70,46 @@ wasp_qval <- wasp %>% select(gene_id, qvalue) %>%
 
 ### need to run eval.R script to build 'padj' and 'truth' ###
 
+padj$mmdiff <- NULL
+padj$mmdiff_gene <- NULL
+
 padj$wasp <- 1
 padj[wasp_qval$tx_id,"wasp"] <- wasp_qval$qvalue
 
+cols <- palette.colors()[c(1,3,6,7,5,8)]
+types <- c("txp","gene","tss","oracle","wasp","truth")
+names(cols) <- types
+
+library(iCOBRA)
+
 cd <- COBRAData(padj=padj, truth=truth)
-if (FALSE) {
-  cp <- calculate_performance(
-    cd, binary_truth="status", aspect="tpr", splv="AI",
-    thrs=c(.01,.05,.1), thr_venn=.05)
-  cplot <- prepare_data_for_plot(cp, colorscheme=cols)
-  plot_tpr(cplot, pointsize=2.5)
-}
+
+cp <- calculate_performance(
+  cd, binary_truth="status", aspect="tpr", splv="AI",
+  thrs=c(.01,.05,.1), thr_venn=.05)
+cplot <- prepare_data_for_plot(cp, colorscheme=cols)
+cplot <- reorder_levels(cplot, names(cols))
+pdf("figs/sim_with_wasp_tpr.pdf")
+plot_tpr(cplot, pointsize=2.5)
+dev.off()
+
 cp <- calculate_performance(
   cd, binary_truth="status",
   aspect=c("tpr","fdr","fdrtpr","fdrnbr",
            "fdrtprcurve","overlap"),
   thrs=c(.01,.05,.1), thr_venn=.05)
 cplot <- prepare_data_for_plot(cp, colorscheme=cols)
+cplot <- reorder_levels(cplot, names(cols))
 xrng <- c(0,.15)
 yrng <- c(0,1)
+pdf("figs/sim_with_wasp_fdrtpr.pdf")
 plot_fdrtprcurve(cplot,
                  plottype="points",
                  xaxisrange=xrng,
                  yaxisrange=yrng,
                  title="txp-level AI testing")
+dev.off()
+
+pdf(file="figs/sim_with_wasp_upset.pdf")
+plot_upset(cplot, order.by="freq", decreasing=TRUE, nintersects=8)
+dev.off()

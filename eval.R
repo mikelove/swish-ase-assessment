@@ -1,11 +1,11 @@
-# Jan 4 2022
+# Mar 18 2022
 
 library(iCOBRA)
 library(dplyr)
 library(tibble)
 
-cols <- palette.colors(9)[c(1:4,6:9)]
-types <- c("txp","gene","tss","oracle","mmdiff","mmdiff_gene","tree")
+cols <- palette.colors(9)[c(1:4,6:8)]
+types <- c("txp","mmdiff","gene","mmdiff_gene","tss","oracle")
 names(cols)[1:(length(cols)-1)] <- types
 names(cols)[length(cols)] <- "truth"
 
@@ -29,11 +29,6 @@ truth <- truth %>%
 # iCOBRA wants a data.frame with rownames
 # but we need rownames as a column for dplyr's inner_join()
 truth_tb <- truth %>% rownames_to_column("txp") %>% tibble()
-
-# add TreeTerminus grouping
-tree_groups <- read.delim("t2g_tree.tsv")
-truth_tb <- truth_tb %>% left_join(tree_groups) %>%
-  mutate(tree_groups = ifelse(is.na(tree_groups), txp, tree_groups))
 
 # make an empty table which we will add columns to
 padj <- data.frame(row.names=rownames(truth))
@@ -73,7 +68,10 @@ cp <- calculate_performance(cd,
                             thrs=c(.01,.05,.1),
                             thr_venn=.05)
 cplot <- prepare_data_for_plot(cp, colorscheme=cols)
+cplot <- reorder_levels(cplot, names(cols))
+pdf(file="figs/sim_with_mmdiff_tpr.pdf")
 plot_tpr(cplot, pointsize=2)
+dev.off()
 
 cp <- calculate_performance(cd,
                             binary_truth="status",
@@ -82,10 +80,16 @@ cp <- calculate_performance(cd,
                             thrs=c(.01,.05,.1),
                             thr_venn=.05)
 cplot <- prepare_data_for_plot(cp, colorscheme=cols)
+cplot <- reorder_levels(cplot, names(cols))
 xrng <- c(0,.15)
 yrng <- c(0,1)
+pdf(file="figs/sim_with_mmdiff_fdrtpr.pdf")
 plot_fdrtprcurve(cplot,
                  plottype="points",
                  xaxisrange=xrng,
-                 yaxisrange=yrng,
-                 title="txp-level AI testing")
+                 yaxisrange=yrng)
+dev.off()
+
+pdf(file="figs/sim_with_mmdiff_upset.pdf")
+plot_upset(cplot, order.by="freq", decreasing=TRUE, nintersects=12)
+dev.off()
