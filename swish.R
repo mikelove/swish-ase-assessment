@@ -75,7 +75,7 @@ for (t in types) {
   y <- swish(y, x="allele", pair="sample")
   mcols(y)$keep <- NULL
   # write results to e.g. 'res/oracle.tsv'
-  write.table(mcols(y), file=paste0("res/",t,".tsv"), sep="\t",quote=FALSE)
+  write.table(mcols(y), file=paste0("res/",t,".tsv"), sep="\t", quote=FALSE)
   # also save SE for plotting
   save(y, file=paste0("res/se_",t,".rda"))
 }
@@ -87,4 +87,4 @@ for (t in types) {
 columns <- c("gene_id","tss","abundance","oracle_groups",
              "tss_groups","isoAI","geneAI")
 truth <- mcols(txps)[,columns]
-write.table(truth, file="truth.tsv", sep="\t",quote=FALSE)
+write.table(truth, file="truth.tsv", sep="\t", quote=FALSE)

@@ -52,13 +52,18 @@ overlap_fps <- fp_genes %>% join_overlap_inner(ai_genes, maxgap=100) %>% names()
 length(overlap_fps)
 
 # re-do locfdr calculation
-library(locfdr)
-z <- qnorm(wasp$pvalue, lower.tail=FALSE)
-fit <- locfdr(z) # check plot to examine left tail
-fdr <- fit$fdr
-fdr[z < 0] <- 1
-wasp$qvalue <- fdr
-#wasp %>% ggplot(aes(qvalue, fdr)) + geom_point()
+redo <- TRUE
+if (redo) {
+  library(locfdr)
+  z <- qnorm(wasp$pvalue, lower.tail=FALSE)
+  fit <- locfdr(z) # check plot to examine left tail
+  fdr <- fit$fdr
+  fdr[z < 0] <- 1
+  wasp$qvalue <- fdr
+  # wasp %>% ggplot(aes(qvalue, fdr)) + geom_point()
+} else {
+  wasp$qvalue <- p.adjust(wasp$pvalue, method="BH")
+}
 
 # propagate q-values to txps
 t2g <- txps %>% select(tx_id, gene_id, .drop_ranges=TRUE) %>%
@@ -102,7 +107,7 @@ cplot <- prepare_data_for_plot(cp, colorscheme=cols)
 cplot <- reorder_levels(cplot, names(cols))
 xrng <- c(0,.15)
 yrng <- c(0,1)
-pdf("figs/sim_with_wasp_fdrtpr.pdf")
+pdf("figs/sim_with_wasp_fdrtpr_no_locfdr.pdf")
 plot_fdrtprcurve(cplot,
                  plottype="points",
                  xaxisrange=xrng,

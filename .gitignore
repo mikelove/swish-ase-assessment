@@ -1,5 +1,6 @@
 res
 data
 truth.tsv
+wasp2
 *.tsv
 *.rda

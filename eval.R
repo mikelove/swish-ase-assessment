@@ -57,7 +57,11 @@ for (t in types) {
   }
 }
 
-# ok now 'padj' is done and we can just run iCOBRA directly:
+# ok now 'padj' is done
+
+### break point for splitting off to adding alternate methods ###
+
+# iCOBRA plots:
 
 cd <- COBRAData(padj=padj, truth=truth)
 cp <- calculate_performance(cd,
