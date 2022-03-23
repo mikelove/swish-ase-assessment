@@ -1,6 +1,6 @@
 library(tibble)
 library(dplyr)
-library(ggplot2)
+#library(ggplot2)
 
 wasp <- read.table("../ase-sim/wasp_cht/cht_results.txt", header=TRUE)
 wasp <- wasp %>% mutate(ratio=ALT.AS.READ.COUNT/REF.AS.READ.COUNT) %>%
@@ -73,47 +73,5 @@ wasp_qval <- wasp %>% select(gene_id, qvalue) %>%
   left_join(t2g) %>%
   select(qvalue, tx_id)
 
-### need to run eval.R script to build 'padj' and 'truth' ###
-
-padj$mmdiff <- NULL
-padj$mmdiff_gene <- NULL
-
-padj$wasp <- 1
-padj[wasp_qval$tx_id,"wasp"] <- wasp_qval$qvalue
-
-cols <- palette.colors()[c(1,3,6,7,5,8)]
-types <- c("txp","gene","tss","oracle","wasp","truth")
-names(cols) <- types
-
-library(iCOBRA)
-
-cd <- COBRAData(padj=padj, truth=truth)
-
-cp <- calculate_performance(
-  cd, binary_truth="status", aspect="tpr", splv="AI",
-  thrs=c(.01,.05,.1), thr_venn=.05)
-cplot <- prepare_data_for_plot(cp, colorscheme=cols)
-cplot <- reorder_levels(cplot, names(cols))
-pdf("figs/sim_with_wasp_tpr.pdf")
-plot_tpr(cplot, pointsize=2.5)
-dev.off()
-
-cp <- calculate_performance(
-  cd, binary_truth="status",
-  aspect=c("tpr","fdr","fdrtpr","fdrnbr",
-           "fdrtprcurve","overlap"),
-  thrs=c(.01,.05,.1), thr_venn=.05)
-cplot <- prepare_data_for_plot(cp, colorscheme=cols)
-cplot <- reorder_levels(cplot, names(cols))
-xrng <- c(0,.15)
-yrng <- c(0,1)
-pdf("figs/sim_with_wasp_fdrtpr_no_locfdr.pdf")
-plot_fdrtprcurve(cplot,
-                 plottype="points",
-                 xaxisrange=xrng,
-                 yaxisrange=yrng)
-dev.off()
-
-pdf(file="figs/sim_with_wasp_upset.pdf")
-plot_upset(cplot, order.by="freq", decreasing=TRUE, nintersects=8)
-dev.off()
+library(readr)
+write_tsv(wasp_qval, file="res/wasp_qval.tsv")

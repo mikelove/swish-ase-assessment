@@ -4,16 +4,15 @@ library(iCOBRA)
 library(dplyr)
 library(tibble)
 
-cols <- palette.colors(9)[c(1:4,6:8)]
-types <- c("txp","mmdiff","gene","mmdiff_gene","tss","oracle")
-names(cols)[1:(length(cols)-1)] <- types
-names(cols)[length(cols)] <- "truth"
+cols <- palette.colors(8)
+types <- c("txp","mmdiff","gene","mmdiff_gene","wasp","tss","oracle")
+names(cols) <- c(types, "truth")
 
 # Motivation for this script:
 
 # For iCOBRA need to make a 'truth' table and a 'padj' table.
 # This is complicated by the fact that we have different levels
-# of resolution of analysis. A simpliciation is to just
+# of resolution of analysis. A simplification is to just
 # evaluate everything at transcript level. We can propagate
 # the q-values from inner nodes to the leaves and evaluate
 # transcript level sensitivity and FDR. We do this with
@@ -25,7 +24,7 @@ truth <- truth %>%
   mutate(gene_groups = gene_id,
          mmdiff_gene_groups = gene_id,
          status = ifelse(abundance == 2, 0, 1),
-         AI = case_when(isoAI ~ "iso", geneAI ~ "gene", TRUE ~ "null"))
+         AI_type = case_when(isoAI ~ "discordant", geneAI ~ "concordant", TRUE ~ "null"))
 # iCOBRA wants a data.frame with rownames
 # but we need rownames as a column for dplyr's inner_join()
 truth_tb <- truth %>% rownames_to_column("txp") %>% tibble()
@@ -33,8 +32,15 @@ truth_tb <- truth %>% rownames_to_column("txp") %>% tibble()
 # make an empty table which we will add columns to
 padj <- data.frame(row.names=rownames(truth))
 
-# loop of diferrent levels of analysis:
+# loop of different levels of analysis:
 for (t in types) {
+  if (t == "wasp") {
+    # read WASP results separately (from wasp_eval.R)
+    wasp_qval <- read.delim("res/wasp_qval.tsv")
+    padj$wasp <- 1
+    padj[wasp_qval$tx_id,"wasp"] <- wasp_qval$qvalue
+    next
+  }
   if (!grepl("mmdiff", t)) {
     res <- read.delim(paste0("res/",t,".tsv")) # read swish results
   } else {
@@ -57,10 +63,6 @@ for (t in types) {
   }
 }
 
-# ok now 'padj' is done
-
-### break point for splitting off to adding alternate methods ###
-
 # iCOBRA plots:
 
 cd <- COBRAData(padj=padj, truth=truth)
@@ -68,12 +70,12 @@ cp <- calculate_performance(cd,
                             binary_truth="status",
                             aspect=c("tpr","fdr","fdrtpr","fdrnbr",
                                      "fdrtprcurve","overlap"),
-                            splv="AI", # breaks across isoAI / geneAI / null
+                            splv="AI_type", # breaks across isoAI / geneAI / null
                             thrs=c(.01,.05,.1),
                             thr_venn=.05)
 cplot <- prepare_data_for_plot(cp, colorscheme=cols)
 cplot <- reorder_levels(cplot, names(cols))
-pdf(file="figs/sim_with_mmdiff_tpr.pdf")
+pdf(file="figs/sim_tpr.pdf")
 plot_tpr(cplot, pointsize=2)
 dev.off()
 
@@ -87,13 +89,13 @@ cplot <- prepare_data_for_plot(cp, colorscheme=cols)
 cplot <- reorder_levels(cplot, names(cols))
 xrng <- c(0,.15)
 yrng <- c(0,1)
-pdf(file="figs/sim_with_mmdiff_fdrtpr.pdf")
+pdf(file="figs/sim_fdrtpr.pdf")
 plot_fdrtprcurve(cplot,
                  plottype="points",
                  xaxisrange=xrng,
                  yaxisrange=yrng)
 dev.off()
 
-pdf(file="figs/sim_with_mmdiff_upset.pdf")
-plot_upset(cplot, order.by="freq", decreasing=TRUE, nintersects=12)
+pdf(file="figs/sim_upset.pdf")
+plot_upset(cplot, order.by="freq", decreasing=TRUE, nintersects=8)
 dev.off()
