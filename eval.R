@@ -5,8 +5,20 @@ library(dplyr)
 library(tibble)
 
 cols <- palette.colors(8)
-types <- c("txp","mmdiff","gene","mmdiff_gene","wasp","tss","oracle")
+#types <- c("txp","mmdiff","gene","mmdiff_gene","wasp","tss","oracle")
+types <- c("txp","gene","tss","oracle")
+cols <- cols[c(1,3,6,7,8)]
 names(cols) <- c(types, "truth")
+
+# for adding DESeq2 or BetaBin:
+if (FALSE) {
+  other <- "bb"
+  new_types <- paste0(other, "_", types)
+  new_cols <- c("grey40","palegreen3", "seagreen", "orange")
+  names(new_cols) <- new_types
+  cols <- c(cols, new_cols)
+  types <- c(types, new_types)
+}
 
 # Motivation for this script:
 
@@ -48,14 +60,15 @@ for (t in types) {
     rownames(res) <- res$feature_id
     res$qvalue <- 1 - res$posterior_probability
   }
-  if (t %in% c("txp","mmdiff")) {
+  if (grepl("txp", t) | t == "mmdiff") {
     # directly add the qvalues from txp-level
     padj[[t]] <- 1
     padj[rownames(res),t] <- res$qvalue
   } else {
     # first join inner-node anlaysis to the txp-level table
+    grouping_col <- sub(".*_(.*)", "\\1", t) # extract grouping level from `t`
     res_tb <- res %>% select(qvalue) %>%
-      rownames_to_column(paste0(t,"_groups")) %>% # this column will allow joining
+      rownames_to_column(paste0(grouping_col,"_groups")) %>% # this column will allow joining
       tibble() %>%
       inner_join(truth_tb) # join with the truth table which has txp ID
     padj[[t]] <- 1 # pre-populate the column with 1's
@@ -87,7 +100,8 @@ cp <- calculate_performance(cd,
                             thr_venn=.05)
 cplot <- prepare_data_for_plot(cp, colorscheme=cols)
 cplot <- reorder_levels(cplot, names(cols))
-xrng <- c(0,.15)
+#xrng <- c(0,.15)
+xrng <- c(0,.2)
 yrng <- c(0,1)
 pdf(file="figs/sim_fdrtpr.pdf")
 plot_fdrtprcurve(cplot,

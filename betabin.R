@@ -5,7 +5,7 @@ library(locfdr)
 types <- c("txp","oracle","gene","tss")
 for (t in types) {
   load(file=paste0("data/se_",t,".rda"))
-  y <- wide; rm(wide)
+  y <- se; rm(se)
   assays(y) <- assays(y)["counts"]
   y <- labelKeep(y)
   y <- y[mcols(y)$keep,]
