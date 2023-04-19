@@ -5,12 +5,16 @@ library(dplyr)
 library(tibble)
 
 cols <- palette.colors(8)
-#types <- c("txp","mmdiff","gene","mmdiff_gene","wasp","tss","oracle")
-types <- c("txp","gene","tss","oracle")
-cols <- cols[c(1,3,6,7,8)]
+if (TRUE) {
+  # main plot
+  types <- c("txp","mmdiff","gene","mmdiff_gene","wasp","tss","oracle")
+} else {
+  types <- c("txp","gene","tss","oracle") # for some plots
+  cols <- cols[c(1,3,6,7,8)]
+}
 names(cols) <- c(types, "truth")
 
-# for adding DESeq2 or BetaBin:
+# for adding BetaBin results:
 if (FALSE) {
   other <- "bb"
   new_types <- paste0(other, "_", types)
@@ -70,7 +74,7 @@ for (t in types) {
     res_tb <- res %>% select(qvalue) %>%
       rownames_to_column(paste0(grouping_col,"_groups")) %>% # this column will allow joining
       tibble() %>%
-      inner_join(truth_tb) # join with the truth table which has txp ID
+      inner_join(truth_tb, multiple="all") # join with the truth table which has txp ID
     padj[[t]] <- 1 # pre-populate the column with 1's
     padj[res_tb$txp, t] <- res_tb$qvalue # add the q-values for matching rows
   }
@@ -100,8 +104,8 @@ cp <- calculate_performance(cd,
                             thr_venn=.05)
 cplot <- prepare_data_for_plot(cp, colorscheme=cols)
 cplot <- reorder_levels(cplot, names(cols))
-#xrng <- c(0,.15)
-xrng <- c(0,.2)
+xrng <- c(0,.15)
+#xrng <- c(0,.5) # for higher FDR evals
 yrng <- c(0,1)
 pdf(file="figs/sim_fdrtpr.pdf")
 plot_fdrtprcurve(cplot,

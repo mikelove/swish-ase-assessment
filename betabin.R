@@ -27,7 +27,10 @@ for (t in types) {
   fit <- apeglm(Y=ase_cts, x=x, log.lik=NULL, param=param,
                 no.shrink=TRUE, log.link=FALSE, method="betabinCR")
   z <- fit$map[,1]/fit$sd[,1]
-  fit <- locfdr(z, df=n-1)
-  df <- data.frame(qvalue=fit$fdr, row.names=rownames(y))
+  pvalue <- pnorm(abs(z), lower.tail=FALSE)
+  qvalue <- p.adjust(pvalue, method="BH")
+  df <- data.frame(pvalue, qvalue, row.names=rownames(y))
+  #fit <- locfdr(z, df=n-1)
+  #df <- data.frame(qvalue=fit$fdr, row.names=rownames(y))
   write.table(df, file=paste0("res/bb_",t,".tsv"), sep="\t",quote=FALSE)
 }
